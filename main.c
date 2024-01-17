@@ -1,8 +1,6 @@
-#include <stdio.h>
 #include "pigeon.h"
 
-
 int main(int argc, char *argv[]) {
-  printf("Hello world\n");
+  Coo();
   return 0;
 }
