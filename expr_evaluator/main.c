@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define AMOUNT_OF_TOKENS 3
+
 typedef enum {
   PLUS,     // +
   MINUS,    // -
@@ -19,6 +21,11 @@ typedef struct {
   TokenType type;
 } Token;
 
+void print_token(Token *t) {
+  printf("Token literal: %s\n", t->literal);
+  printf("Token type: %s\n", t->type == OPERATOR ? "OPERATOR" : "OPERAND");
+}
+
 typedef struct {
   char *buffer;
   size_t buffer_size;
@@ -29,8 +36,10 @@ typedef struct {
 int is_digit(char c) {
   // using ASCII representations
   // to check if c is a digit literal
-  return (c >= 30 && c <= 39);
+  return c >= 48 && c <= 57;
 }
+
+int is_operator(char c) { return c == '-' || c == '+' || c == '*' || c == '/'; }
 
 int read_char(Lexer *l) {
   if (l->current_position + 1 == l->buffer_size) {
@@ -87,7 +96,7 @@ char *read_operand(Lexer *l) {
   int operand_len = 0;
   int index = l->current_position;
   char c = l->current_char;
-  while (c >= 30 && c <= 39) { // whether c is a numerical character
+  while (c >= 48 && c <= 57) { // whether c is a numerical character
     c = peek_at_lexer_buffer(l, ++index);
     operand_len++;
   }
@@ -95,10 +104,11 @@ char *read_operand(Lexer *l) {
   char *operand_literal = malloc(operand_len);
   if (operand_literal == NULL) {
     perror("Error while allocating memory for operand literal:");
-    return "";
+    return NULL;
   }
   for (int i = 0; i < operand_len; i++) {
-    operand_literal[i] = read_char(l);
+    operand_literal[i] = l->current_char;
+    read_char(l);
   }
   operand_literal[operand_len] = '\0';
   return operand_literal;
@@ -115,9 +125,52 @@ int main(int argc, char **argv) {
   if (l == NULL) {
     return 0;
   }
+  int num_of_tokens = 0;
+  Token tokens[AMOUNT_OF_TOKENS];
   while ((read_char(l) != EOF)) {
     skip_whitespace(l);
-    printf("Character %c\n", l->current_char);
+    if (is_digit(l->current_char)) {
+      // if digit is found read operand and store it as token
+      char *operand = read_operand(l);
+      if (operand == NULL) {
+        break;
+      }
+      printf("Operand: %s\n", operand);
+      Token t = (Token){
+          .literal = operand,
+          .type = OPERAND,
+      };
+      if (num_of_tokens < AMOUNT_OF_TOKENS) {
+        tokens[num_of_tokens] = t;
+        num_of_tokens++;
+      }
+    }
+    if (is_operator(l->current_char)) {
+      Token t = (Token){
+          .type = OPERATOR,
+      };
+      switch (l->current_char) {
+      case '-':
+        t.literal = "-";
+        break;
+      case '+':
+        t.literal = "+";
+        break;
+      case '*':
+        t.literal = "*";
+        break;
+      case '/':
+        t.literal = "/";
+        break;
+      }
+      if (num_of_tokens < AMOUNT_OF_TOKENS) {
+        tokens[num_of_tokens] = t;
+        num_of_tokens++;
+      }
+    }
+  }
+  for (int i = 0; i < num_of_tokens; i++) {
+    print_token(&tokens[i]);
   }
   free(l);
   return 0;
